@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Webmulator</title>
+    <link rel="stylesheet" href="https://unpkg.com/98.css" />
+
+    <style>
+        body {
+            background-color: #008080;
+        }
+        
+        p {
+            font-size: 17px;
+            text-align: center;
+        }
+        
+        .window {
+            position: relative; 
+            left: 0; 
+            right: 0; 
+            margin-left: auto;
+            margin-right: auto;
+            top: 5px;
+            width: 1000px;
+        }
+    </style>
+</head>
+
+<body>
+    
+    <div class="window" id="gamewindow" style="display: block;">
+      <div class="title-bar">
+        <div class="title-bar-text" id="titleBar">gbaweblator</div>
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize" onclick="launchAB();"></button>
+          <button aria-label="Close" onclick="window.parent.window.location.replace('https://classroom.google.com/h');"></button>
+        </div>
+        </div>
+      <div class="window-body" id="home">
+        <!-- content starts -->
+          <div id="welcomeMessage"><p>Welcome to gbaweblator, a simple retro emulator that can load ROMs from a variety of consoles.</p>
+          <p>To remove this page from your search history, click the <strong>x</strong> button in the top right.</p></div>
+          <div id="box" style="width: 900px">
+            <input type="text" id="romLink" placeholder="Enter ROM link">
+            <button id="uploadbutton" onclick="loadROM()">Load ROM</button>
+          </div>
+        <!-- content ends -->
+      </div>
+    </div>
+    
+    <script>
+        function loadROM() {
+            const romLink = document.getElementById('romLink').value;
+            if (!romLink) {
+                alert('Please enter a ROM link');
+                return;
+            }
+            launchEmulator(romLink);
+        }
+
+        function launchEmulator(romLink) {
+            const tab = window.open('about:blank', '_blank');
+            
+            const iframe = tab.document.createElement('iframe');
+            const stl = iframe.style;
+            stl.border = stl.outline = 'none';
+            stl.width = '100vw';
+            stl.height = '100vh';
+            stl.position = 'fixed';
+            stl.left = stl.right = stl.top = stl.bottom = '0';
+            iframe.src = "https://webmulator.github.io";
+            tab.document.body.appendChild(iframe);
+            alert("Launched successfully!");
+            
+            // Pass ROM link to the iframe
+            iframe.onload = function() {
+                iframe.contentWindow.postMessage({ romLink: romLink }, '*');
+            };
+        }
+    </script>
+    
+    <script>
+        window.addEventListener('message', function(event) {
+            const romLink = event.data.romLink;
+            if (romLink) {
+                const romFileName = romLink.substring(romLink.lastIndexOf('/') + 1);
+                const romName = romFileName.substring(0, romFileName.lastIndexOf('.'));
+                
+                window.EJS_player = "#game";
+                window.EJS_gameName = romName;
+                window.EJS_biosUrl = "";
+                window.EJS_gameUrl = romLink;
+                window.EJS_core = "mgba"; // Change this to the appropriate core if needed
+                window.EJS_pathtodata = "https://rawcdn.githack.com/EmulatorJS/EmulatorJS/main/data/";
+                window.EJS_startOnLoaded = true;
+                
+                const script = document.createElement('script');
+                script.src = "https://rawcdn.githack.com/EmulatorJS/EmulatorJS/main/data/loader.js";
+                document.body.appendChild(script);
+                
+                document.getElementById('welcomeMessage').innerHTML = "";
+                document.getElementById('titleBar').innerHTML = "Webmulator (" + romName + ")";
+            }
+        });
+    </script>
+</body>
+</html>
