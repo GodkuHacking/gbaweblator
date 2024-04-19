@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>gbamwebulator</title>
+    <title>gbawebulator</title>
     <link rel="stylesheet" href="https://unpkg.com/98.css" />
 
     <style>
@@ -30,7 +30,7 @@
     
     <div class="window" id="gamewindow" style="display: block;">
       <div class="title-bar">
-        <div class="title-bar-text" id="titleBar">gbaweblator</div>
+        <div class="title-bar-text" id="titleBar">gbawebulator</div>
         <div class="title-bar-controls">
           <button aria-label="Minimize"></button>
           <button aria-label="Maximize" onclick="launchAB();"></button>
@@ -39,9 +39,10 @@
         </div>
       <div class="window-body" id="home">
         <!-- content starts -->
-          <div id="welcomeMessage"><p>Welcome to gbaweblator, a simple retro emulator that can load ROMs from a variety of consoles.</p>
+          <div id="welcomeMessage"><p>Welcome to gbawebulator, a simple retro emulator that can load ROMs from a variety of consoles.</p>
           <p>To remove this page from your search history, click the <strong>x</strong> button in the top right.</p></div>
           <div id="box" style="width: 900px">
+            <input type="file" id="input" accept=".zip" hidden>
             <input type="text" id="romLink" placeholder="Enter ROM link">
             <button id="uploadbutton" onclick="loadROM()">Load ROM</button>
           </div>
@@ -50,16 +51,14 @@
     </div>
     
     <script>
-        function loadROM() {
-            const romLink = document.getElementById('romLink').value;
-            if (!romLink) {
-                alert('Please enter a ROM link');
-                return;
-            }
-            launchEmulator(romLink);
+        document.getElementById('uploadbutton').addEventListener('click', openDialog);
+
+        function openDialog() {
+            document.getElementById('input').click();
         }
 
-        function launchEmulator(romLink) {
+        function launchAB() {
+            alert("When the about:blank window launches, come back to this tab and click the x button to clear this page from your search history.");
             const tab = window.open('about:blank', '_blank');
             
             const iframe = tab.document.createElement('iframe');
@@ -69,40 +68,116 @@
             stl.height = '100vh';
             stl.position = 'fixed';
             stl.left = stl.right = stl.top = stl.bottom = '0';
-            iframe.src = "https://webmulator.github.io";
+            iframe.src = "https://gbawebulator.github.io";
             tab.document.body.appendChild(iframe);
             alert("Launched successfully!");
-            
-            // Pass ROM link to the iframe
-            iframe.onload = function() {
-                iframe.contentWindow.postMessage({ romLink: romLink }, '*');
-            };
         }
-    </script>
-    
-    <script>
-        window.addEventListener('message', function(event) {
-            const romLink = event.data.romLink;
+
+        function loadROM() {
+            const romLink = document.getElementById('romLink').value;
+            const fileInput = document.getElementById('input');
+
             if (romLink) {
-                const romFileName = romLink.substring(romLink.lastIndexOf('/') + 1);
-                const romName = romFileName.substring(0, romFileName.lastIndexOf('.'));
-                
+                handleURL(romLink);
+            } else if (fileInput.files.length > 0) {
+                handleFileUpload(fileInput.files[0]);
+            } else {
+                alert('Please enter a ROM link or upload a ROM file.');
+            }
+        }
+
+        async function handleURL(romLink) {
+            const parts = romLink.split(".");
+            const extension = parts[parts.length - 1];
+            const core = await getCore(extension);
+
+            if (core) {
+                const div = document.createElement("div");
+                const sub = document.createElement("div");
+                const script = document.createElement("script");
+
+                sub.id = "game";
+
+                div.appendChild(sub);
+                document.getElementById('home').appendChild(div);
+                document.getElementById('welcomeMessage').innerHTML = "";
+                document.getElementById('titleBar').innerHTML = `gbawebulator (${parts.shift()})`;
+
                 window.EJS_player = "#game";
-                window.EJS_gameName = romName;
+                window.EJS_gameName = parts.shift();
                 window.EJS_biosUrl = "";
                 window.EJS_gameUrl = romLink;
-                window.EJS_core = "mgba"; // Change this to the appropriate core if needed
+                window.EJS_core = core;
                 window.EJS_pathtodata = "https://rawcdn.githack.com/EmulatorJS/EmulatorJS/main/data/";
                 window.EJS_startOnLoaded = true;
                 
-                const script = document.createElement('script');
                 script.src = "https://rawcdn.githack.com/EmulatorJS/EmulatorJS/main/data/loader.js";
                 document.body.appendChild(script);
-                
-                document.getElementById('welcomeMessage').innerHTML = "";
-                document.getElementById('titleBar').innerHTML = "Webmulator (" + romName + ")";
+            } else {
+                alert('Unsupported file format.');
             }
-        });
+        }
+
+        async function getCore(extension) {
+            // You can modify this function to determine the core based on the file extension
+            // For now, I'll just provide a basic implementation
+            switch (extension.toLowerCase()) {
+                case "nes":
+                case "fds":
+                case "unif":
+                case "unf":
+                    return "nes";
+                case "smc":
+                case "fig":
+                case "sfc":
+                case "gd3":
+                case "gd7":
+                case "dx2":
+                case "bsx":
+                case "swc":
+                    return "snes";
+                case "z64":
+                case "n64":
+                    return "n64";
+                case "gba":
+                case "gb":
+                    return "gba";
+                default:
+                    return null;
+            }
+        }
+
+        async function handleFileUpload(file) {
+            const url = URL.createObjectURL(file);
+            const parts = file.name.split(".");
+            const core = await getCore(parts.pop());
+
+            if (core) {
+                const div = document.createElement("div");
+                const sub = document.createElement("div");
+                const script = document.createElement("script");
+
+                sub.id = "game";
+
+                div.appendChild(sub);
+                document.getElementById('home').appendChild(div);
+                document.getElementById('welcomeMessage').innerHTML = "";
+                document.getElementById('titleBar').innerHTML = `gbawebulator (${parts.shift()})`;
+
+                window.EJS_player = "#game";
+                window.EJS_gameName = parts.shift();
+                window.EJS_biosUrl = "";
+                window.EJS_gameUrl = url;
+                window.EJS_core = core;
+                window.EJS_pathtodata = "https://rawcdn.githack.com/EmulatorJS/EmulatorJS/main/data/";
+                window.EJS_startOnLoaded = true;
+                
+                script.src = "https://rawcdn.githack.com/EmulatorJS/EmulatorJS/main/data/loader.js";
+                document.body.appendChild(script);
+            } else {
+                alert('Unsupported file format.');
+            }
+        }
     </script>
 </body>
 </html>
